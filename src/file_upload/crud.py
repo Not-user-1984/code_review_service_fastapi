@@ -1,8 +1,11 @@
-from auth.models import User
 from sqlalchemy.ext.asyncio import AsyncSession
-from .models import UploadedFile
-from .utils import is_valid_py_extension
 from sqlalchemy.future import select
+
+from auth.models import User
+
+from .models import UploadedFile
+from .utils import (file_exists_by_content, file_exists_by_name,
+                    is_valid_py_extension)
 
 
 async def create_uploaded_file(
@@ -11,9 +14,15 @@ async def create_uploaded_file(
         filename: str,
         content: bytes
 ) -> UploadedFile:
+
     if not is_valid_py_extension(filename):
         raise ValueError("Only .py files are allowed.")
     decoded_content = content.decode("utf-8")
+    if await file_exists_by_name(db, filename):
+        raise ValueError("File with the same name already exists.")
+    if await file_exists_by_content(db, decoded_content):
+        raise ValueError("File with the same content already exists.")
+
     uploaded_file = UploadedFile(
         user_id=user.id,
         filename=filename,
@@ -23,7 +32,6 @@ async def create_uploaded_file(
     db.add(uploaded_file)
     await db.commit()
     await db.refresh(uploaded_file)
-
     return uploaded_file
 
 
@@ -55,19 +63,20 @@ async def update_uploaded_file(
     stmt = select(UploadedFile).where(
         UploadedFile.id == file_id, UploadedFile.user_id == user.id
     )
-    uploaded_file = (await db.execute(stmt)).scalar_one_or_none()
+    update_file = (await db.execute(stmt)).scalar_one_or_none()
 
-    if not uploaded_file:
+    if not update_file:
         raise ValueError("File not found or not owned by the user.")
 
     if not is_valid_py_extension(filename):
         raise ValueError("Only .py files are allowed.")
 
-    uploaded_file.filename = filename
-    uploaded_file.content = content.decode("utf-8")
-    uploaded_file.is_new = False
-    uploaded_file.is_updated = True
+    update_file.filename = filename
+    update_file.content = content.decode("utf-8")
+    update_file.is_new = False
+    update_file.is_updated = True
     await db.commit()
+    return update_file
 
 
 async def get_user_uploaded_file(db: AsyncSession, user: User):

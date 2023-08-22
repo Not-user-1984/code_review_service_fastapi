@@ -9,17 +9,15 @@ class UploadedFileCreate(BaseModel):
 
 
 class UploadedFileUpdate(BaseModel):
+    message: str
     filename: str
-
-
-# class UploadedFileDelete(BaseModel):
-#     filename: Optional[str]
+    created_at: datetime
 
 
 class UploadedFileResponse(BaseModel):
-    filename: str
-    is_new: bool
-    created_at: datetime
+    message: str
+    filename: Optional[str]
+    created_at:  Optional[datetime]
 
     class Config:
         orm_mode = True
@@ -33,6 +31,3 @@ class UploadedFileGet(BaseModel):
 
     class Config:
         orm_mode = True
-
-class UploadedFileDeleteRequest(BaseModel):
-    filename: str

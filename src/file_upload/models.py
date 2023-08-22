@@ -17,4 +17,4 @@ class UploadedFile(Base):
     is_updated = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
-    user = relationship("User", backref = "uploaded_files")
+    user = relationship("User", backref="uploaded_files")
