@@ -1,45 +1,61 @@
-from sqlalchemy.orm import Session
 from auth.models import User
+from sqlalchemy.ext.asyncio import AsyncSession
 from .models import UploadedFile
 from .utils import is_valid_py_extension
+from sqlalchemy.future import select
 
 
-def create_uploaded_file(
-        db: Session, user: User, filename: str, content: str) -> UploadedFile:
+async def create_uploaded_file(
+        db: AsyncSession,
+        user: User,
+        filename: str,
+        content: bytes
+) -> UploadedFile:
     if not is_valid_py_extension(filename):
         raise ValueError("Only .py files are allowed.")
-
+    decoded_content = content.decode("utf-8")
     uploaded_file = UploadedFile(
         user_id=user.id,
         filename=filename,
-        content=content,  # Добавлен аргумент с содержимым файла
+        content=decoded_content,
         is_new=True
     )
-
     db.add(uploaded_file)
-    db.commit()
-    db.refresh(uploaded_file)
+    await db.commit()
+    await db.refresh(uploaded_file)
 
     return uploaded_file
 
 
+async def delete_uploaded_file(
+    db: AsyncSession,
+    file_id: int,
+    user: User
+):
+    stmt = select(UploadedFile).where(
+        UploadedFile.id == file_id, UploadedFile.user_id == user.id
+    )
+    uploaded_file = (await db.execute(stmt)).scalar_one_or_none()
+    print(uploaded_file.filename)
 
-def delete_uploaded_file(
-        db: Session,
-        file_id: int,
-        user: User):
-    uploaded_file = db.query(UploadedFile).filter(
-        UploadedFile.id == file_id, UploadedFile.user_id == user.id).first()
     if not uploaded_file:
         raise ValueError("File not found or not owned by the user.")
 
-    uploaded_file.is_deleted = True
-    db.commit()
+    await db.delete(uploaded_file)
+    await db.commit()
 
 
-def update_uploaded_file(db: Session, file_id: int, user: User, filename: str):
-    uploaded_file = db.query(UploadedFile).filter(
-        UploadedFile.id == file_id, UploadedFile.user_id == user.id).first()
+async def update_uploaded_file(
+        db: AsyncSession,
+        file_id: int,
+        user: User,
+        filename: str,
+        content: str):
+
+    stmt = select(UploadedFile).where(
+        UploadedFile.id == file_id, UploadedFile.user_id == user.id
+    )
+    uploaded_file = (await db.execute(stmt)).scalar_one_or_none()
 
     if not uploaded_file:
         raise ValueError("File not found or not owned by the user.")
@@ -47,9 +63,14 @@ def update_uploaded_file(db: Session, file_id: int, user: User, filename: str):
     if not is_valid_py_extension(filename):
         raise ValueError("Only .py files are allowed.")
 
+    uploaded_file.filename = filename
+    uploaded_file.content = content.decode("utf-8")
+    uploaded_file.is_new = False
     uploaded_file.is_updated = True
-    db.commit()
+    await db.commit()
 
 
-def get_user_uploaded_file(db: Session, user: User):
-    return db.query(UploadedFile).filter(UploadedFile.user_id == user.id).first()
+async def get_user_uploaded_file(db: AsyncSession, user: User):
+    stmt = select(UploadedFile).where(UploadedFile.user_id == user.id)
+    result = await db.execute(stmt)
+    return result.all()

@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 
 
 from src.auth.models import *
+from src.file_upload.models import *
 from src.config import settings
 from src.db.base import Base
 from src.db.session import get_async_session
