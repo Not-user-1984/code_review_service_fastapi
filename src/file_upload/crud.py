@@ -79,7 +79,8 @@ async def update_uploaded_file(
     return update_file
 
 
-async def get_user_uploaded_file(db: AsyncSession, user: User):
+async def get_user_uploaded_files(db: AsyncSession, user: User):
     stmt = select(UploadedFile).where(UploadedFile.user_id == user.id)
     result = await db.execute(stmt)
     return result.all()
+

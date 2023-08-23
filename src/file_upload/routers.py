@@ -8,12 +8,9 @@ from auth.auth import fastapi_users
 from auth.models import User
 from db.session import get_async_session
 
-
 from .crud import (create_uploaded_file, delete_uploaded_file,
-                   get_user_uploaded_file, update_uploaded_file)
-from .schemas import (UploadedFileDeleteRequest, UploadedFileGet,
-                      UploadedFileResponse, UploadedFileUpdate)
-
+                   get_user_uploaded_files, update_uploaded_file)
+from .schemas import UploadedFileGet, UploadedFileResponse, UploadedFileUpdate
 
 router = APIRouter()
 
@@ -80,7 +77,7 @@ async def get_file(
     user: User = Depends(fastapi_users.current_user()),
     db: AsyncSession = Depends(get_async_session)
 ):
-    uploaded_files = await get_user_uploaded_file(db, user)
+    uploaded_files = await get_user_uploaded_files(db, user)
 
     uploaded_file_responses = [
         UploadedFileGet(

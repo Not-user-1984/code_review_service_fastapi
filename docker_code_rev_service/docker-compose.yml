@@ -59,6 +59,12 @@ services:
     networks:
       - postgres
 
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   pgadmin:
     container_name: pgadmin__code_rev  
     image: dpage/pgadmin4:7
